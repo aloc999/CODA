@@ -5,7 +5,7 @@
 #
 set -euo pipefail
 
-VERSION="2.0.0"
+VERSION="3.0.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CODA_HOME="$SCRIPT_DIR"
 REPORT_DIR=""
@@ -41,18 +41,24 @@ usage() {
     echo "  mutation        Run mutation testing (Gambit)"
     echo "  quick           Quick audit (Slither + Grep + Mythril)"
     echo "  report          Generate final audit report"
-    echo "  secrets       Run secret/credential scan (Gitleaks)"
-    echo "  visualize     Run Surya + Slither graphs"
-    echo "  all-static    Run all static tools (Slither + Semgrep + Securify + Grep)"
+    echo "  secrets       Run secret scan (Gitleaks + Trufflehog)"
+    echo "  deps          Run dependency vulnerability audit"
+    echo "  lint          Run Solidity linter (Solhint)"
+    echo "  bytecode      Run bytecode analysis (Rattle + Tenderly)"
+    echo "  visualize     Run Surya + Slither graphs + Coverage"
+    echo "  all-static    Run ALL static tools (9 tools)"
     echo "  clean         Clean all generated files"
     echo "  version       Show version"
     echo ""
-    echo "Tools (15 total):"
-    echo "  Core:    Slither, Mythril, Semgrep, Securify2, Surya"
-    echo "  Fuzz:    Echidna, Medusa, Foundry, Differential"
-    echo "  Formal:  Certora, Halmos, Scribble"
-    echo "  Scan:    GrepArsenal, Gitleaks"
-    echo "  Mutate:  Gambit, Manticore, Brownie"
+    echo "Tools (26 total):"
+    echo "  Static:   Slither, Semgrep, Securify2, Wake, Aderyn, Solhint"
+    echo "  Symbolic: Mythril, Manticore, Halmos, Kontrol (KEVM)"
+    echo "  Fuzz:     Echidna, Medusa, Foundry, Differential, Etheno"
+    echo "  Formal:   Certora, Scribble"
+    echo "  Scan:     GrepArsenal, Gitleaks, Trufflehog, Phalcon"
+    echo "  Bytecode: Rattle, Tenderly"
+    echo "  Quality:  Surya, Coverage, Deps-Audit, Brownie, Slither-printers"
+    echo "  Mutate:   Gambit"
     echo ""
     echo "Environment variables:"
     echo "  CERTORA_KEY     Certora API key for formal verification"
@@ -342,7 +348,21 @@ run_slither_printers() {
     fi
 }
 
-# Update the audit runner to include all new tools
+# --- v3.0 new tool runners ---
+
+run_kontrol() { local t="$1"; echo -e "${BLUE}[J] Running Kontrol KEVM...${NC}"; bash "${CODA_HOME}/lib/kontrol.sh" "$t" "$REPORT_DIR"; }
+run_rattle() { local t="$1"; echo -e "${BLUE}[K] Running Rattle bytecode analysis...${NC}"; bash "${CODA_HOME}/lib/rattle.sh" "$t" "$REPORT_DIR"; }
+run_tenderly() { local t="$1"; echo -e "${BLUE}[L] Running Tenderly traces...${NC}"; bash "${CODA_HOME}/lib/tenderly.sh" "$t" "$REPORT_DIR"; }
+run_phalcon() { local t="$1"; echo -e "${BLUE}[M] Running Phalcon on-chain scan...${NC}"; bash "${CODA_HOME}/lib/phalcon.sh" "$t" "$REPORT_DIR"; }
+run_trufflehog() { local t="$1"; echo -e "${BLUE}[N] Running Trufflehog git history scan...${NC}"; bash "${CODA_HOME}/lib/trufflehog.sh" "$t" "$REPORT_DIR"; }
+run_deps() { local t="$1"; echo -e "${BLUE}[O] Running dependency audit...${NC}"; bash "${CODA_HOME}/lib/deps-audit.sh" "$t" "$REPORT_DIR"; }
+run_coverage() { local t="$1"; echo -e "${BLUE}[P] Running coverage analysis...${NC}"; bash "${CODA_HOME}/lib/coverage.sh" "$t" "$REPORT_DIR"; }
+run_etheno() { local t="$1"; echo -e "${BLUE}[Q] Running Etheno differential...${NC}"; bash "${CODA_HOME}/lib/etheno.sh" "$t" "$REPORT_DIR"; }
+run_aderyn() { local t="$1"; echo -e "${BLUE}[R] Running Aderyn Rust analyzer...${NC}"; bash "${CODA_HOME}/lib/aderyn.sh" "$t" "$REPORT_DIR"; }
+run_wake() { local t="$1"; echo -e "${BLUE}[S] Running Wake (30 detectors)...${NC}"; bash "${CODA_HOME}/lib/wake.sh" "$t" "$REPORT_DIR"; }
+run_solhint() { local t="$1"; echo -e "${BLUE}[T] Running Solhint linter...${NC}"; bash "${CODA_HOME}/lib/solhint.sh" "$t" "$REPORT_DIR"; }
+
+# Update the audit runner to include all 26 tools
 run_full_audit() {
     local target="$1"
     REPORT_DIR="${target}/coda-report-$(date +%Y%m%d-%H%M%S)"
@@ -362,11 +382,16 @@ run_full_audit() {
     if ! echo "$skip" | grep -q "securify"; then run_securify "$target"; fi
     if ! echo "$skip" | grep -q "surya"; then run_surya "$target"; fi
     if ! echo "$skip" | grep -q "gitleaks"; then run_gitleaks "$target"; fi
+    if ! echo "$skip" | grep -q "trufflehog"; then run_trufflehog "$target"; fi
+    if ! echo "$skip" | grep -q "deps"; then run_deps "$target"; fi
+    if ! echo "$skip" | grep -q "solhint"; then run_solhint "$target"; fi
+    if ! echo "$skip" | grep -q "coverage"; then run_coverage "$target"; fi
     
     # Symbolic & formal tools
     if ! echo "$skip" | grep -q "mythril"; then run_mythril "$target"; fi
     if ! echo "$skip" | grep -q "manticore"; then run_manticore "$target"; fi
     if ! echo "$skip" | grep -q "halmos"; then run_halmos "$target"; fi
+    if ! echo "$skip" | grep -q "kontrol"; then run_kontrol "$target"; fi
     if ! echo "$skip" | grep -q "certora"; then run_certora "$target"; fi
     
     # Fuzzing tools
@@ -374,19 +399,27 @@ run_full_audit() {
     if ! echo "$skip" | grep -q "medusa"; then run_medusa "$target"; fi
     if ! echo "$skip" | grep -q "foundry"; then run_foundry_invariant "$target"; fi
     if ! echo "$skip" | grep -q "differential"; then run_differential "$target"; fi
+    if ! echo "$skip" | grep -q "etheno"; then run_etheno "$target"; fi
     
     # Mutation & annotation tools
     if ! echo "$skip" | grep -q "gambit"; then run_gambit "$target"; fi
     if ! echo "$skip" | grep -q "scribble"; then run_scribble "$target"; fi
     
-    # Analysis extras
+    # Bytecode & on-chain
+    if ! echo "$skip" | grep -q "rattle"; then run_rattle "$target"; fi
+    if ! echo "$skip" | grep -q "phalcon"; then run_phalcon "$target"; fi
+    if ! echo "$skip" | grep -q "tenderly"; then run_tenderly "$target"; fi
+    
+    # Framework-specific
+    if ! echo "$skip" | grep -q "aderyn"; then run_aderyn "$target"; fi
+    if ! echo "$skip" | grep -q "wake"; then run_wake "$target"; fi
     if ! echo "$skip" | grep -q "brownie"; then run_brownie "$target"; fi
     if ! echo "$skip" | grep -q "printers"; then run_slither_printers "$target"; fi
     
     echo ""
     echo -e "${GREEN}════════════════════════════════════════${NC}"
     echo -e "${GREEN}  CODA audit complete!                   ${NC}"
-    echo -e "${GREEN}  15 tools executed                      ${NC}"
+    echo -e "${GREEN}  26 tools executed                      ${NC}"
     echo -e "${GREEN}  Report: $REPORT_DIR                    ${NC}"
     echo -e "${GREEN}════════════════════════════════════════${NC}"
 }"
@@ -452,6 +485,26 @@ main() {
             REPORT_DIR="${2}/coda-report-$(date +%Y%m%d-%H%M%S)"
             mkdir -p "$REPORT_DIR"
             run_gitleaks "${2}"
+            run_trufflehog "${2}"
+            ;;
+        deps)
+            if [ -z "${2:-}" ]; then echo "Usage: coda deps <target-path>"; exit 1; fi
+            REPORT_DIR="${2}/coda-report-$(date +%Y%m%d-%H%M%S)"
+            mkdir -p "$REPORT_DIR"
+            run_deps "${2}"
+            ;;
+        lint)
+            if [ -z "${2:-}" ]; then echo "Usage: coda lint <target-path>"; exit 1; fi
+            REPORT_DIR="${2}/coda-report-$(date +%Y%m%d-%H%M%S)"
+            mkdir -p "$REPORT_DIR"
+            run_solhint "${2}"
+            ;;
+        bytecode)
+            if [ -z "${2:-}" ]; then echo "Usage: coda bytecode <target-path>"; exit 1; fi
+            REPORT_DIR="${2}/coda-report-$(date +%Y%m%d-%H%M%S)"
+            mkdir -p "$REPORT_DIR"
+            run_rattle "${2}"
+            run_tenderly "${2}"
             ;;
         visualize)
             if [ -z "${2:-}" ]; then echo "Usage: coda visualize <target-path>"; exit 1; fi
@@ -459,6 +512,7 @@ main() {
             mkdir -p "$REPORT_DIR"
             run_surya "${2}"
             run_slither_printers "${2}"
+            run_coverage "${2}"
             ;;
         all-static)
             if [ -z "${2:-}" ]; then echo "Usage: coda all-static <target-path>"; exit 1; fi
@@ -467,10 +521,13 @@ main() {
             run_slither "${2}"
             run_semgrep "${2}"
             run_securify "${2}"
+            run_wake "${2}"
+            run_aderyn "${2}"
             run_grep_arsenal "${2}"
             run_gitleaks "${2}"
+            run_solhint "${2}"
             run_slither_printers "${2}"
-            ;;
+            ;;'
         clean)
             rm -rf "${2:-.}/coda-report-"* gambit_out medusa-corpus corpus echidna-corpus 2>/dev/null
             echo -e "${GREEN}Cleaned generated files${NC}"

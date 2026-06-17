@@ -147,7 +147,67 @@ else
 fi
 
 # 15. solc (via solc-select)
-echo -e "${YELLOW}[15/15] Installing solc 0.8.34...${NC}"
+echo -e "${YELLOW}[15/26] Installing solc 0.8.34...${NC}"
+
+# 16. Aderyn
+echo -e "${YELLOW}[16/26] Installing Aderyn...${NC}"
+if ! command -v aderyn >/dev/null 2>&1; then
+    ADERYN_VER="0.6.8"
+    curl -sL "https://github.com/Cyfrin/aderyn/releases/download/aderyn-v${ADERYN_VER}/aderyn-x86_64-unknown-linux-gnu.tar.xz" -o /tmp/aderyn.tar.xz
+    tar xJf /tmp/aderyn.tar.xz -C "$INSTALL_DIR/" --strip-components=1 2>/dev/null || true
+    chmod +x "$INSTALL_DIR/aderyn" 2>/dev/null || true
+else echo "  Already installed: $(aderyn --version 2>&1)"; fi
+
+# 17. Wake
+echo -e "${YELLOW}[17/26] Installing Wake...${NC}"
+if ! command -v wake >/dev/null 2>&1; then
+    pip3 install eth-wake --break-system-packages 2>/dev/null || pip3 install eth-wake || echo "  ⚠ Optional"
+else echo "  Already installed"; fi
+
+# 18. Solhint
+echo -e "${YELLOW}[18/26] Installing Solhint...${NC}"
+if ! command -v solhint >/dev/null 2>&1; then
+    npm install -g solhint 2>/dev/null || echo "  ⚠ Optional"
+else echo "  Already installed"; fi
+
+# 19. Trufflehog
+echo -e "${YELLOW}[19/26] Installing Trufflehog...${NC}"
+if ! command -v trufflehog >/dev/null 2>&1; then
+    curl -sL "https://github.com/trufflesecurity/trufflehog/releases/download/v3.81.0/trufflehog_3.81.0_linux_amd64.tar.gz" -o /tmp/th.tar.gz
+    tar xzf /tmp/th.tar.gz -C "$INSTALL_DIR/" trufflehog 2>/dev/null || true
+    chmod +x "$INSTALL_DIR/trufflehog" 2>/dev/null || true
+else echo "  Already installed"; fi
+
+# 20. Kontrol
+echo -e "${YELLOW}[20/26] Installing Kontrol (KEVM)...${NC}"
+echo "  Manual: curl -sL https://raw.githubusercontent.com/runtimeverification/kup/main/install.sh | bash"
+
+# 21. Rattle
+echo -e "${YELLOW}[21/26] Installing Rattle...${NC}"
+pip3 install rattle-analyzer --break-system-packages 2>/dev/null || echo "  ⚠ Optional — git clone https://github.com/trailofbits/rattle"
+echo "  Already installed or skipped"
+
+# 22. Snyk
+echo -e "${YELLOW}[22/26] Installing Snyk...${NC}"
+if ! command -v snyk >/dev/null 2>&1; then
+    npm install -g snyk 2>/dev/null || echo "  ⚠ Optional — npm install -g snyk && snyk auth"
+else echo "  Already installed"; fi
+
+# 23. solidity-coverage
+echo -e "${YELLOW}[23/26] Installing solidity-coverage...${NC}"
+npm install -g solidity-coverage 2>/dev/null || echo "  ⚠ Optional"
+
+# 24. Etheno
+echo -e "${YELLOW}[24/26] Installing Etheno...${NC}"
+pip3 install etheno --break-system-packages 2>/dev/null || echo "  ⚠ Optional"
+
+# 25. Tenderly
+echo -e "${YELLOW}[25/26] Installing Tenderly CLI...${NC}"
+echo "  Manual: curl -sL https://raw.githubusercontent.com/Tenderly/tenderly-cli/master/scripts/install.sh | bash"
+
+# 26. Phalcon (BlockSec)
+echo -e "${YELLOW}[26/26] Installing Phalcon...${NC}"
+echo "  Web-based: https://app.blocksec.com/explorer""
 if ! command -v solc >/dev/null 2>&1; then
     pip3 install solc-select --break-system-packages 2>/dev/null || pip3 install solc-select
     solc-select install 0.8.34

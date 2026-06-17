@@ -1,10 +1,10 @@
 # CODA — Comprehensive On-chain Defense Arsenal
 
-**15 tools. 1 command. Zero missed vulnerabilities.**
+**26 tools. 1 command. Zero missed vulnerabilities.**
 
 Developed by [@aloc999](https://github.com/aloc999) (Hashemi)
 
-CODA is the most comprehensive smart contract audit toolkit in existence. 15 security tools integrated into a single, unified workflow — from static analysis to formal verification to mutation testing.
+CODA is the most comprehensive smart contract audit toolkit in existence. 26 security tools integrated into a single, unified workflow — from static analysis to formal verification to bytecode analysis.
 
 ## Tools Included
 
@@ -14,17 +14,28 @@ CODA is the most comprehensive smart contract audit toolkit in existence. 15 sec
 | 2 | **Slither Printers** | Visualization | Call graphs, inheritance, auth maps, data flows |
 | 3 | **Semgrep** | Custom Rules (13 detectors) | Solidity-specific patterns, silent modifiers, proxy bugs |
 | 4 | **Securify2** | Formal Static Analysis | Proves: locked ether, unchecked sends, reentrancy |
-| 5 | **Mythril** | Symbolic Execution | Integer overflow, unprotected selfdestruct, reachability |
-| 6 | **Manticore** | Symbolic Execution (ToB) | EVM-level bugs, multi-transaction symbolic paths |
-| 7 | **Halmos** | Symbolic Proving | Prove properties for ALL inputs (Z3/yices SMT) |
-| 8 | **Echidna** | Property Fuzzing | Invariant violations via 50K+ random call sequences |
-| 9 | **Medusa** | Coverage-Guided Fuzzing | Deep state exploration, multi-core |
-| 10 | **Foundry** | Invariant Testing | Stateful fuzzing with real contract state |
-| 11 | **Differential Fuzzing** | Comparative Testing | Catch discrepancies between equivalent functions |
-| 12 | **Grep Arsenal** | Pattern Scan | 50+ vulnerability patterns (oracle, proxy, sig replay) |
-| 13 | **Gitleaks** | Secret Scanning | Private keys, API tokens, mnemonics, passwords |
-| 14 | **Certora Prover** | Formal Verification | Cloud-based formal verification |
-| 15 | **Gambit** | Mutation Testing | Verify test suite comprehensive coverage |
+| 5 | **Wake** | Python Detectors (30+) | Access control, arithmetic, reentrancy, call graphs |
+| 6 | **Aderyn** | Rust Static Analysis | DeFi-specific detectors, Foundry-native |
+| 7 | **Solhint** | Solidity Linter | Code quality, style, security rules |
+| 8 | **Mythril** | Symbolic Execution | Integer overflow, unprotected selfdestruct |
+| 9 | **Manticore** | Symbolic Execution (ToB) | EVM-level bugs, multi-transaction paths |
+| 10 | **Halmos** | Symbolic Proving | Prove properties for ALL inputs (Z3/yices SMT) |
+| 11 | **Kontrol (KEVM)** | EVM Formal Verification | Bytecode-level proofs: storage, delegatecall, gas |
+| 12 | **Echidna** | Property Fuzzing | Invariant violations via 50K+ random sequences |
+| 13 | **Medusa** | Coverage Fuzzing | Deep state exploration, multi-core parallel |
+| 14 | **Foundry** | Invariant Testing | Stateful fuzzing with real contract state |
+| 15 | **Differential Fuzzing** | Comparative Testing | Catch discrepancies between equivalent functions |
+| 16 | **Etheno** | EVM Differential | Compare behavior across EVM implementations |
+| 17 | **Grep Arsenal** | Pattern Scan | 50+ vulnerability patterns |
+| 18 | **Gitleaks** | Secret Scanning | Current files: private keys, API tokens |
+| 19 | **Trufflehog** | Git History Scan | Full commit history for leaked secrets |
+| 20 | **Phalcon** | On-Chain Monitoring | Attack pattern detection, transaction explorer |
+| 21 | **Certora Prover** | Formal Verification | Cloud-based formal verification |
+| 22 | **Gambit** | Mutation Testing | Test suite fitness: catches every deviation |
+| 23 | **Rattle** | Bytecode SSA Analysis | Compiler bugs, constructor logic, initcode |
+| 24 | **Tenderly** | Transaction Simulation | Fork testing, debug traces, gas profiling |
+| 25 | **Deps Audit** | Dependency Scanning | npm/yarn/pip/snyk vulnerability audit |
+| 26 | **Coverage** | Code Coverage | Line/branch/function coverage with HTML reports |
 | + | **Scribble** | Annotation | Runtime property checking from source annotations |
 | + | **Brownie** | Test Framework | Python-based integration testing |
 | + | **Surya** | Visualization | Inheritance graphs, dependency maps |
@@ -43,15 +54,18 @@ echo 'export PATH="$HOME/.foundry/bin:$HOME/.local/bin:$PATH"' >> ~/.bashrc
 source ~/.bashrc
 
 # 3. Run a full audit
-coda audit /path/to/project      # FULL audit (all 15 tools)
+coda audit /path/to/project      # FULL audit (all 26 tools)
 coda quick /path/to/project        # Fast audit (Slither + Grep + Mythril)
-coda all-static /path/to/project   # All static: Slither + Semgrep + Securify + Grep + Gitleaks
-coda fuzz /path/to/project         # All fuzzing: Echidna + Medusa + Foundry + Differential
-coda symbolic /path/to/project     # All symbolic: Mythril + Manticore + Halmos
-coda secrets /path/to/project      # Secret scan: Gitleaks
-coda visualize /path/to/project    # Graphs: Surya + Slither printers
-coda formal /path/to/project       # Formal verification: Certora Prover
-coda mutation /path/to/project     # Mutation testing: Gambit
+coda all-static /path/to/project   # 9 static tools (Slither + Semgrep + Securify + Wake + Aderyn + ...)
+coda fuzz /path/to/project         # All fuzzing: Echidna + Medusa + Foundry + Differential + Etheno
+coda symbolic /path/to/project     # All symbolic: Mythril + Manticore + Halmos + Kontrol
+coda secrets /path/to/project      # Secret scan: Gitleaks + Trufflehog
+coda deps /path/to/project         # Dependency audit (npm + yarn + pip + snyk)
+coda lint /path/to/project         # Solidity linter (Solhint)
+coda bytecode /path/to/project     # Bytecode: Rattle + Tenderly
+coda visualize /path/to/project    # Graphs + Coverage: Surya + Slither
+coda formal /path/to/project       # Formal: Certora Prover
+coda mutation /path/to/project     # Mutation: Gambit
 coda report /path/to/project       # Generate audit report
 ```
 
@@ -86,15 +100,15 @@ Drop these into your project, customize the invariants, and run the audit.
 ## Typical Audit Flow
 
 ```
-Quick audit (Slither + Grep + Mythril + Semgrep)  ~4 min    →  First pass
-All-static (Slither + Semgrep + Securify + Grep)   ~6 min    →  Static sweep
-Symbolic (Mythril + Manticore + Halmos)            ~15 min   →  Prove all paths
-Fuzzing (Echidna + Medusa + Foundry + Diff)        ~20 min   →  Break invariants
-Formal verification (Certora)                      ~10 min   →  Cloud formal proof
-Mutation testing (Gambit)                          ~15 min   →  Test suite coverage
-Secrets + Visualize                                ~3 min    →  Keys, graphs, deps
+Quick audit (Slither + Grep + Mythril + Semgrep)  ~4 min
+All-static (9 static tools)                         ~8 min
+Symbolic (Mythril + Manticore + Halmos + Kontrol)   ~20 min
+Fuzzing (Echidna + Medusa + Foundry + Diff + Etheno) ~25 min
+Formal verification (Certora)                       ~10 min
+Mutation testing (Gambit)                           ~15 min
+Bytecode + Secrets + Coverage + Deps                ~10 min
 ─────────────────────────────────────────────────────────────
-FULL AUDIT (all 15 tools)                          ~70 min   →  Complete coverage
+FULL AUDIT (all 26 tools)                           ~90 min → Complete coverage
 ```
 
 ## Example Output
