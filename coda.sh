@@ -23,7 +23,8 @@ banner() {
     echo "   ╚═════╝  ╚═════╝ ╚═════╝ ╚═╝  ╚═╝"
     echo -e "${NC}"
     echo -e "${GREEN}  Comprehensive On-chain Defense Arsenal v${VERSION}${NC}"
-    echo -e "${YELLOW}  9 tools. 1 command. Zero missed vulnerabilities.${NC}"
+    echo -e "${YELLOW}  15 tools. 1 command. Zero missed vulnerabilities.${NC}"
+    echo -e "  Developed by @aloc999 (Hashemi)"
     echo ""
 }
 
