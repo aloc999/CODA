@@ -2,6 +2,8 @@
 
 **15 tools. 1 command. Zero missed vulnerabilities.**
 
+Developed by [@aloc999](https://github.com/aloc999) (Hashemi)
+
 CODA is the most comprehensive smart contract audit toolkit in existence. 15 security tools integrated into a single, unified workflow — from static analysis to formal verification to mutation testing.
 
 ## Tools Included

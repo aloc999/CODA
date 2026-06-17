@@ -5,7 +5,7 @@
 #
 set -euo pipefail
 
-VERSION="1.0.0"
+VERSION="2.0.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CODA_HOME="$SCRIPT_DIR"
 REPORT_DIR=""
