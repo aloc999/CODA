@@ -1,22 +1,32 @@
 # CODA — Comprehensive On-chain Defense Arsenal
 
-**9 tools. 1 command. Zero missed vulnerabilities.**
+**15 tools. 1 command. Zero missed vulnerabilities.**
 
-CODA is an all-in-one smart contract audit toolkit that integrates 9 battle-tested security tools into a single, unified workflow. Run a full audit with one command.
+CODA is the most comprehensive smart contract audit toolkit in existence. 15 security tools integrated into a single, unified workflow — from static analysis to formal verification to mutation testing.
 
 ## Tools Included
 
 | # | Tool | Type | What It Catches |
 |---|------|------|----------------|
-| 1 | **Slither** | Static Analysis | Reentrancy, access control, uninitialized state, 91 detectors |
-| 2 | **Mythril** | Symbolic Execution | Integer overflow, unprotected selfdestruct, reachability |
-| 3 | **Echidna** | Property Fuzzing | Invariant violations via 50K+ random call sequences |
-| 4 | **Medusa** | Coverage Fuzzing | Deep state exploration with multi-core parallelism |
-| 5 | **Foundry** | Invariant Testing | Full-suite invariant fuzzing with real contract state |
-| 6 | **Grep Arsenal** | Pattern Scan | 50+ vulnerability patterns (reentrancy, oracle, proxy) |
-| 7 | **Halmos** | Symbolic Proving | Prove properties for ALL inputs (not just sampled) |
-| 8 | **Certora Prover** | Formal Verification | Cloud-based formal verification of access control + invariants |
-| 9 | **Gambit** | Mutation Testing | Verify test suite catches every behavioral deviation |
+| 1 | **Slither** | Static Analysis (91 detectors) | Reentrancy, access control, uninitialized state |
+| 2 | **Slither Printers** | Visualization | Call graphs, inheritance, auth maps, data flows |
+| 3 | **Semgrep** | Custom Rules (13 detectors) | Solidity-specific patterns, silent modifiers, proxy bugs |
+| 4 | **Securify2** | Formal Static Analysis | Proves: locked ether, unchecked sends, reentrancy |
+| 5 | **Mythril** | Symbolic Execution | Integer overflow, unprotected selfdestruct, reachability |
+| 6 | **Manticore** | Symbolic Execution (ToB) | EVM-level bugs, multi-transaction symbolic paths |
+| 7 | **Halmos** | Symbolic Proving | Prove properties for ALL inputs (Z3/yices SMT) |
+| 8 | **Echidna** | Property Fuzzing | Invariant violations via 50K+ random call sequences |
+| 9 | **Medusa** | Coverage-Guided Fuzzing | Deep state exploration, multi-core |
+| 10 | **Foundry** | Invariant Testing | Stateful fuzzing with real contract state |
+| 11 | **Differential Fuzzing** | Comparative Testing | Catch discrepancies between equivalent functions |
+| 12 | **Grep Arsenal** | Pattern Scan | 50+ vulnerability patterns (oracle, proxy, sig replay) |
+| 13 | **Gitleaks** | Secret Scanning | Private keys, API tokens, mnemonics, passwords |
+| 14 | **Certora Prover** | Formal Verification | Cloud-based formal verification |
+| 15 | **Gambit** | Mutation Testing | Verify test suite comprehensive coverage |
+| + | **Scribble** | Annotation | Runtime property checking from source annotations |
+| + | **Brownie** | Test Framework | Python-based integration testing |
+| + | **Surya** | Visualization | Inheritance graphs, dependency maps |
+| + | **CI/CD** | Automation | GitHub Actions: audit on every push/PR |
 
 ## Quick Start
 
@@ -31,16 +41,16 @@ echo 'export PATH="$HOME/.foundry/bin:$HOME/.local/bin:$PATH"' >> ~/.bashrc
 source ~/.bashrc
 
 # 3. Run a full audit
-coda audit /path/to/your/smart-contract-project
-
-# Or run individual phases:
-coda static /path/to/project     # Slither + Grep (fast, ~2 min)
-coda symbolic /path/to/project   # Mythril + Halmos (medium, ~10 min)
-coda fuzz /path/to/project       # Echidna + Medusa + Foundry (deep, ~15 min)
-coda formal /path/to/project     # Certora Prover (requires API key)
-coda mutation /path/to/project   # Gambit mutation testing
-coda quick /path/to/project      # Fast audit (Slither + Grep + Mythril)
-coda report /path/to/project     # Generate final audit report
+coda audit /path/to/project      # FULL audit (all 15 tools)
+coda quick /path/to/project        # Fast audit (Slither + Grep + Mythril)
+coda all-static /path/to/project   # All static: Slither + Semgrep + Securify + Grep + Gitleaks
+coda fuzz /path/to/project         # All fuzzing: Echidna + Medusa + Foundry + Differential
+coda symbolic /path/to/project     # All symbolic: Mythril + Manticore + Halmos
+coda secrets /path/to/project      # Secret scan: Gitleaks
+coda visualize /path/to/project    # Graphs: Surya + Slither printers
+coda formal /path/to/project       # Formal verification: Certora Prover
+coda mutation /path/to/project     # Mutation testing: Gambit
+coda report /path/to/project       # Generate audit report
 ```
 
 ## Configuration
