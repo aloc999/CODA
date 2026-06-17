@@ -1,0 +1,8 @@
+{
+  "remappings": [
+    "@openzeppelin/=node_modules/@openzeppelin/",
+    "forge-std/=lib/forge-std/src/"
+  ],
+  "optimizer": { "enabled": true, "runs": 200 },
+  "viaIR": false
+}

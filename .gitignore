@@ -1,0 +1,15 @@
+# CODA generated files
+coda-report-*/
+gambit_out/
+medusa-corpus/
+echidna-corpus/
+corpus/
+crytic-export/
+*.log
+__pycache__/
+*.pyc
+
+# Solidity
+cache/
+out/
+broadcast/
