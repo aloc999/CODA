@@ -40,8 +40,18 @@ usage() {
     echo "  mutation        Run mutation testing (Gambit)"
     echo "  quick           Quick audit (Slither + Grep + Mythril)"
     echo "  report          Generate final audit report"
-    echo "  clean           Clean all generated files"
-    echo "  version         Show version"
+    echo "  secrets       Run secret/credential scan (Gitleaks)"
+    echo "  visualize     Run Surya + Slither graphs"
+    echo "  all-static    Run all static tools (Slither + Semgrep + Securify + Grep)"
+    echo "  clean         Clean all generated files"
+    echo "  version       Show version"
+    echo ""
+    echo "Tools (15 total):"
+    echo "  Core:    Slither, Mythril, Semgrep, Securify2, Surya"
+    echo "  Fuzz:    Echidna, Medusa, Foundry, Differential"
+    echo "  Formal:  Certora, Halmos, Scribble"
+    echo "  Scan:    GrepArsenal, Gitleaks"
+    echo "  Mutate:  Gambit, Manticore, Brownie"
     echo ""
     echo "Environment variables:"
     echo "  CERTORA_KEY     Certora API key for formal verification"
@@ -267,12 +277,118 @@ run_full_audit() {
     if ! echo "$skip" | grep -q "certora"; then run_certora "$target"; fi
     if ! echo "$skip" | grep -q "gambit"; then run_gambit "$target"; fi
     
+# --- Additional tool runners ---
+
+run_semgrep() {
+    local t="$1"
+    echo -e "${BLUE}[A] Running Semgrep custom rules...${NC}"
+    bash "${CODA_HOME}/lib/semgrep.sh" "$t" "$REPORT_DIR"
+}
+
+run_securify() {
+    local t="$1"
+    echo -e "${BLUE}[B] Running Securify2...${NC}"
+    bash "${CODA_HOME}/lib/securify.sh" "$t" "$REPORT_DIR"
+}
+
+run_surya() {
+    local t="$1"
+    echo -e "${BLUE}[C] Running Surya visualization...${NC}"
+    bash "${CODA_HOME}/lib/surya.sh" "$t" "$REPORT_DIR"
+}
+
+run_gitleaks() {
+    local t="$1"
+    echo -e "${BLUE}[D] Running secret scanner...${NC}"
+    bash "${CODA_HOME}/lib/gitleaks.sh" "$t" "$REPORT_DIR"
+}
+
+run_manticore() {
+    local t="$1"
+    echo -e "${BLUE}[E] Running Manticore...${NC}"
+    bash "${CODA_HOME}/lib/manticore.sh" "$t" "$REPORT_DIR"
+}
+
+run_scribble() {
+    local t="$1"
+    echo -e "${BLUE}[F] Running Scribble annotation...${NC}"
+    bash "${CODA_HOME}/lib/scribble.sh" "$t" "$REPORT_DIR"
+}
+
+run_differential() {
+    local t="$1"
+    echo -e "${BLUE}[G] Running Differential Fuzzing...${NC}"
+    bash "${CODA_HOME}/lib/differential.sh" "$t" "$REPORT_DIR"
+}
+
+run_brownie() {
+    local t="$1"
+    echo -e "${BLUE}[H] Running Brownie analysis...${NC}"
+    bash "${CODA_HOME}/lib/brownie.sh" "$t" "$REPORT_DIR"
+}
+
+run_slither_printers() {
+    local t="$1"
+    echo -e "${BLUE}[I] Running Slither printers (graphs + summaries)...${NC}"
+    if command -v slither >/dev/null 2>&1; then
+        cd "$t"
+        slither . --filter-paths "test|node_modules|lib" --print call-graph > "$REPORT_DIR/slither-callgraph.dot" 2>/dev/null || true
+        slither . --filter-paths "test|node_modules|lib" --print inheritance-graph > "$REPORT_DIR/slither-inheritance.dot" 2>/dev/null || true
+        slither . --filter-paths "test|node_modules|lib" --print function-summary > "$REPORT_DIR/slither-functions.txt" 2>/dev/null || true
+        slither . --filter-paths "test|node_modules|lib" --print vars-and-auth > "$REPORT_DIR/slither-auth.txt" 2>/dev/null || true
+        slither . --filter-paths "test|node_modules|lib" --print data-dependency > "$REPORT_DIR/slither-dependencies.txt" 2>/dev/null || true
+        cd - >/dev/null
+    fi
+}
+
+# Update the audit runner to include all new tools
+run_full_audit() {
+    local target="$1"
+    REPORT_DIR="${target}/coda-report-$(date +%Y%m%d-%H%M%S)"
+    mkdir -p "$REPORT_DIR"
+
+    banner
+    echo "Target: $target"
+    echo "Report: $REPORT_DIR"
+    echo ""
+
+    local skip="${CODA_SKIP:-}"
+    
+    # Core tools (always run)
+    if ! echo "$skip" | grep -q "slither"; then run_slither "$target"; fi
+    if ! echo "$skip" | grep -q "grep"; then run_grep_arsenal "$target"; fi
+    if ! echo "$skip" | grep -q "semgrep"; then run_semgrep "$target"; fi
+    if ! echo "$skip" | grep -q "securify"; then run_securify "$target"; fi
+    if ! echo "$skip" | grep -q "surya"; then run_surya "$target"; fi
+    if ! echo "$skip" | grep -q "gitleaks"; then run_gitleaks "$target"; fi
+    
+    # Symbolic & formal tools
+    if ! echo "$skip" | grep -q "mythril"; then run_mythril "$target"; fi
+    if ! echo "$skip" | grep -q "manticore"; then run_manticore "$target"; fi
+    if ! echo "$skip" | grep -q "halmos"; then run_halmos "$target"; fi
+    if ! echo "$skip" | grep -q "certora"; then run_certora "$target"; fi
+    
+    # Fuzzing tools
+    if ! echo "$skip" | grep -q "echidna"; then run_echidna "$target"; fi
+    if ! echo "$skip" | grep -q "medusa"; then run_medusa "$target"; fi
+    if ! echo "$skip" | grep -q "foundry"; then run_foundry_invariant "$target"; fi
+    if ! echo "$skip" | grep -q "differential"; then run_differential "$target"; fi
+    
+    # Mutation & annotation tools
+    if ! echo "$skip" | grep -q "gambit"; then run_gambit "$target"; fi
+    if ! echo "$skip" | grep -q "scribble"; then run_scribble "$target"; fi
+    
+    # Analysis extras
+    if ! echo "$skip" | grep -q "brownie"; then run_brownie "$target"; fi
+    if ! echo "$skip" | grep -q "printers"; then run_slither_printers "$target"; fi
+    
     echo ""
     echo -e "${GREEN}════════════════════════════════════════${NC}"
-    echo -e "${GREEN}  CODA audit complete!${NC}"
-    echo -e "${GREEN}  Report: $REPORT_DIR${NC}"
+    echo -e "${GREEN}  CODA audit complete!                   ${NC}"
+    echo -e "${GREEN}  15 tools executed                      ${NC}"
+    echo -e "${GREEN}  Report: $REPORT_DIR                    ${NC}"
     echo -e "${GREEN}════════════════════════════════════════${NC}"
-}
+}"
 
 # --- Main ---
 
@@ -329,6 +445,30 @@ main() {
             ;;
         report)
             bash "${CODA_HOME}/lib/report.sh" "${2:-.}"
+            ;;
+        secrets)
+            if [ -z "${2:-}" ]; then echo "Usage: coda secrets <target-path>"; exit 1; fi
+            REPORT_DIR="${2}/coda-report-$(date +%Y%m%d-%H%M%S)"
+            mkdir -p "$REPORT_DIR"
+            run_gitleaks "${2}"
+            ;;
+        visualize)
+            if [ -z "${2:-}" ]; then echo "Usage: coda visualize <target-path>"; exit 1; fi
+            REPORT_DIR="${2}/coda-report-$(date +%Y%m%d-%H%M%S)"
+            mkdir -p "$REPORT_DIR"
+            run_surya "${2}"
+            run_slither_printers "${2}"
+            ;;
+        all-static)
+            if [ -z "${2:-}" ]; then echo "Usage: coda all-static <target-path>"; exit 1; fi
+            REPORT_DIR="${2}/coda-report-$(date +%Y%m%d-%H%M%S)"
+            mkdir -p "$REPORT_DIR"
+            run_slither "${2}"
+            run_semgrep "${2}"
+            run_securify "${2}"
+            run_grep_arsenal "${2}"
+            run_gitleaks "${2}"
+            run_slither_printers "${2}"
             ;;
         clean)
             rm -rf "${2:-.}/coda-report-"* gambit_out medusa-corpus corpus echidna-corpus 2>/dev/null

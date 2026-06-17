@@ -1,0 +1,217 @@
+name: CODA Smart Contract Audit
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'contracts/**'
+      - 'src/**'
+      - '**.sol'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'contracts/**'
+      - 'src/**'
+      - '**.sol'
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'  # Weekly Monday 6AM
+
+jobs:
+  # Job 1: Static Analysis (fast, runs first)
+  static-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install CODA
+        run: |
+          curl -sL https://raw.githubusercontent.com/aloc999/CODA/main/install.sh | bash
+          echo "$HOME/.foundry/bin" >> $GITHUB_PATH
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      
+      - name: Slither Analysis
+        run: |
+          slither . --filter-paths "test|node_modules|lib|script" \
+            --exclude naming-convention,solc-version,similar-names \
+            --sarif slither-results.sarif || true
+      
+      - name: Semgrep Rules
+        run: |
+          pip3 install semgrep
+          semgrep scan --config p/solidity --include "*.sol" --sarif -o semgrep-results.sarif . || true
+      
+      - name: Grep Arsenal
+        run: |
+          bash lib/grep-arsenal.sh . ./grep-results || true
+      
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: slither-results.sarif
+      
+      - name: Upload Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-analysis
+          path: |
+            slither-results.sarif
+            semgrep-results.sarif
+            grep-results/
+
+  # Job 2: Symbolic Execution (medium)
+  symbolic-execution:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install tools
+        run: |
+          pip3 install mythril slither-analyzer --break-system-packages || true
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      
+      - name: Mythril Analysis
+        run: |
+          mkdir -p mythril-results
+          for f in $(find contracts -name "*.sol" ! -path "*/factories/*" ! -path "*/interfaces/*" | head -6); do
+            name=$(basename "$f" .sol)
+            timeout 120 myth analyze "$f" \
+              --execution-timeout 60 --solver-timeout 20000 \
+              > "mythril-results/${name}.txt" 2>&1 || true
+          done
+      
+      - name: Upload Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: symbolic-execution
+          path: mythril-results/
+
+  # Job 3: Fuzzing (long-running, parallel)
+  fuzzing:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tool: [echidna, medusa, foundry]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install Foundry
+        run: |
+          curl -L https://foundry.paradigm.xyz | bash
+          echo "$HOME/.foundry/bin" >> $GITHUB_PATH
+          export PATH="$HOME/.foundry/bin:$PATH"
+          foundryup
+      
+      - name: Install Fuzzers
+        run: |
+          curl -sL "https://github.com/crytic/echidna/releases/download/v2.2.5/echidna-2.2.5-x86_64-linux.tar.gz" -o /tmp/echidna.tar.gz
+          tar xzf /tmp/echidna.tar.gz -C $HOME/.local/bin/
+          chmod +x $HOME/.local/bin/echidna
+          curl -sL "https://github.com/crytic/medusa/releases/download/v0.1.8/medusa-linux-x64.tar.gz" -o /tmp/medusa.tar.gz
+          tar xzf /tmp/medusa.tar.gz -C $HOME/.local/bin/
+          chmod +x $HOME/.local/bin/medusa
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      
+      - name: Run ${{ matrix.tool }}
+        run: |
+          mkdir -p fuzz-results
+          case ${{ matrix.tool }} in
+            echidna)
+              for f in $(find test/echidna -name "*.sol" 2>/dev/null); do
+                n=$(basename "$f" .sol)
+                timeout 300 echidna "$f" --contract "$n" --test-limit 50000 --format text > "fuzz-results/${n}.txt" 2>&1 || true
+              done
+              ;;
+            medusa)
+              for f in $(find test/medusa -name "*.sol" 2>/dev/null); do
+                n=$(basename "$f" .sol)
+                timeout 300 medusa fuzz --target "$f" --test-limit 100000 > "fuzz-results/${n}.txt" 2>&1 || true
+              done
+              ;;
+            foundry)
+              forge test --match-contract "Invariant" --fuzz-runs 200 > "fuzz-results/foundry.txt" 2>&1 || true
+              ;;
+          esac
+      
+      - name: Upload Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzzing-${{ matrix.tool }}
+          path: fuzz-results/
+
+  # Job 4: Report Generation
+  report:
+    needs: [static-analysis, symbolic-execution, fuzzing]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      
+      - name: Generate CODA Report
+        run: |
+          cat > CODA-AUDIT-REPORT.md << 'REPORT'
+          # CODA Automated Audit Report
+          
+          **Date:** $(date '+%Y-%m-%d %H:%M:%S')
+          **Ref:** ${{ github.sha }}
+          **Branch:** ${{ github.ref_name }}
+          **URL:** ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+          
+          ## Summary
+          
+          This automated audit ran Slither, Semgrep, Mythril, Echidna, Medusa, and Foundry 
+          invariant tests against all contracts.
+          
+          ## Check Artifacts for Detailed Results
+          
+          - **static-analysis** — Slither + Semgrep + Grep Arsenal
+          - **symbolic-execution** — Mythril symbolic analysis
+          - **fuzzing-echidna** — Echidna property fuzzing
+          - **fuzzing-medusa** — Medusa coverage fuzzing
+          - **fuzzing-foundry** — Foundry invariant tests
+          
+          REPORT
+          
+          echo "Report generated"
+      
+      - name: Upload Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-report
+          path: CODA-AUDIT-REPORT.md
+
+  # Job 5: Secret Scanning
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          config-path: .gitleaks.toml

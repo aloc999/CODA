@@ -92,8 +92,62 @@ else
     echo "  Already installed: $(gambit --help 2>&1 | head -1)"
 fi
 
-# 9. solc (via solc-select)
-echo -e "${YELLOW}[9/9] Installing solc 0.8.34...${NC}"
+# 9. Semgrep
+echo -e "${YELLOW}[9/15] Installing Semgrep...${NC}"
+if ! command -v semgrep >/dev/null 2>&1; then
+    pip3 install semgrep --break-system-packages 2>/dev/null || pip3 install semgrep
+else
+    echo "  Already installed: $(semgrep --version 2>&1 | head -1)"
+fi
+
+# 10. Surya
+echo -e "${YELLOW}[10/15] Installing Surya...${NC}"
+if ! command -v surya >/dev/null 2>&1; then
+    npm install -g surya 2>/dev/null || echo "  ⚠ Optional — skip with: npm install -g surya"
+else
+    echo "  Already installed"
+fi
+
+# 11. Gitleaks
+echo -e "${YELLOW}[11/15] Installing Gitleaks...${NC}"
+if ! command -v gitleaks >/dev/null 2>&1; then
+    curl -sL "https://github.com/gitleaks/gitleaks/releases/download/v8.18.0/gitleaks_8.18.0_linux_x64.tar.gz" \
+        -o /tmp/gitleaks.tar.gz
+    tar xzf /tmp/gitleaks.tar.gz -C "$INSTALL_DIR/" gitleaks 2>/dev/null || true
+    chmod +x "$INSTALL_DIR/gitleaks" 2>/dev/null || true
+else
+    echo "  Already installed: $(gitleaks version 2>&1 | head -1)"
+fi
+
+# 12. Manticore
+echo -e "${YELLOW}[12/15] Installing Manticore...${NC}"
+if ! command -v manticore >/dev/null 2>&1; then
+    pip3 install manticore --break-system-packages 2>/dev/null || {
+        echo "  ⚠ Manticore build failed — use Docker: docker pull trailofbits/manticore"
+    }
+else
+    echo "  Already installed: $(manticore --version 2>&1 | head -1)"
+fi
+
+# 13. Brownie
+echo -e "${YELLOW}[13/15] Installing Brownie...${NC}"
+if ! command -v brownie >/dev/null 2>&1; then
+    pip3 install eth-brownie --break-system-packages 2>/dev/null || pip3 install eth-brownie
+else
+    echo "  Already installed: $(brownie --version 2>&1 | head -1)"
+fi
+
+# 14. Scribble
+echo -e "${YELLOW}[14/15] Installing Scribble...${NC}"
+if ! command -v scribble >/dev/null 2>&1; then
+    npm install -g eth-scribble 2>/dev/null || npm install -g @consensys/scribble 2>/dev/null || \
+        echo "  ⚠ Optional — skip with: npm install -g eth-scribble"
+else
+    echo "  Already installed"
+fi
+
+# 15. solc (via solc-select)
+echo -e "${YELLOW}[15/15] Installing solc 0.8.34...${NC}"
 if ! command -v solc >/dev/null 2>&1; then
     pip3 install solc-select --break-system-packages 2>/dev/null || pip3 install solc-select
     solc-select install 0.8.34

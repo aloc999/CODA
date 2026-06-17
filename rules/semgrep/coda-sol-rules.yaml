@@ -1,0 +1,137 @@
+rules:
+  # --- ACCESS CONTROL ---
+  - id: coda-initialize-no-modifier
+    pattern: |
+      function initialize(...) $BODY
+    message: "initialize() may be missing 'initializer' modifier — unprotected proxy initialization"
+    severity: ERROR
+    languages: [solidity]
+    paths:
+      include: ["contracts/**"]
+
+  - id: coda-tx-origin-auth
+    pattern: tx.origin
+    message: "tx.origin used for authentication — vulnerable to phishing"
+    severity: ERROR
+    languages: [solidity]
+    paths:
+      include: ["contracts/**"]
+
+  - id: coda-unchecked-transfer
+    patterns:
+      - pattern-either:
+        - pattern: $TOKEN.transfer(...)
+        - pattern: $TOKEN.transferFrom(...)
+      - pattern-not: SafeERC20.$METHOD(...)
+    message: "ERC20 transfer without SafeERC20 — may silently fail on non-standard tokens"
+    severity: WARNING
+    languages: [solidity]
+    paths:
+      include: ["contracts/**"]
+
+  - id: coda-divide-before-multiply
+    pattern: |
+      ($A / $B) * $C
+    message: "Division before multiplication — precision loss. Multiply first."
+    severity: WARNING
+    languages: [solidity]
+
+  # --- REENTRANCY ---
+  - id: coda-external-call-before-state-update
+    patterns:
+      - pattern-either:
+        - pattern: $TARGET.call{value: $V}(...)
+        - pattern: $TOKEN.safeTransfer(...)
+        - pattern: $TOKEN.safeTransferFrom(...)
+      - pattern-not-inside: |
+          nonReentrant ...
+    message: "External call without nonReentrant guard. Verify CEI (Checks-Effects-Interactions) order."
+    severity: WARNING
+    languages: [solidity]
+
+  # --- ARITHMETIC ---
+  - id: coda-unchecked-block
+    pattern: unchecked { ... }
+    message: "unchecked block detected — ensure the arithmetic inside cannot overflow/underflow"
+    severity: INFO
+    languages: [solidity]
+
+  # --- ORACLE ---
+  - id: coda-chainlink-no-staleness
+    patterns:
+      - pattern: latestRoundData()
+      - pattern-not: updatedAt
+    message: "Chainlink latestRoundData() without staleness check (updatedAt). Stale prices accepted."
+    severity: ERROR
+    languages: [solidity]
+
+  # --- PROXY ---
+  - id: coda-unprotected-upgrade
+    patterns:
+      - pattern: function _authorizeUpgrade(...)
+      - pattern-not: onlyOwner
+      - pattern-not: onlyRole(...)
+    message: "_authorizeUpgrade without access control — anyone can upgrade the proxy"
+    severity: ERROR
+    languages: [solidity]
+
+  # --- SIGNATURES ---
+  - id: coda-ecrecover-no-chainid
+    patterns:
+      - pattern: ecrecover(...)
+      - pattern-not: block.chainid
+      - pattern-not: chainId
+    message: "ecrecover without chainId — signature valid on all chains (cross-chain replay)"
+    severity: ERROR
+    languages: [solidity]
+
+  - id: coda-ecrecover-no-nonce
+    patterns:
+      - pattern: ecrecover(...)
+      - pattern-not: nonce
+    message: "ecrecover without nonce — same signature can be replayed"
+    severity: ERROR
+    languages: [solidity]
+
+  # --- FUNDS ---
+  - id: coda-arbitrary-transferfrom
+    pattern: $TOKEN.transferFrom($FROM, $TO, $AMOUNT)
+    message: "transferFrom with storage-based 'from' — ensure FROM is not attacker-controlled"
+    severity: WARNING
+    languages: [solidity]
+
+  - id: coda-selfdestruct
+    pattern: selfdestruct(...)
+    message: "selfdestruct detected — verify access control and impact"
+    severity: ERROR
+    languages: [solidity]
+
+  - id: coda-delegatecall
+    pattern: $TARGET.delegatecall(...)
+    message: "delegatecall detected — verify TARGET is not user-controlled"
+    severity: ERROR
+    languages: [solidity]
+
+  # --- EVENTS ---
+  - id: coda-missing-event-admin
+    patterns:
+      - pattern-either:
+        - pattern: function setOwner(...)
+        - pattern: function transferOwnership(...)
+        - pattern: function setAdmin(...)
+      - pattern-not: emit
+    message: "Admin change function without event emission — hard to audit"
+    severity: WARNING
+    languages: [solidity]
+
+  # --- GAS ---
+  - id: coda-loop-external-call
+    patterns:
+      - pattern: |
+          for (...) { ... $EXTERNAL_CALL ... }
+      - metavariable-regex:
+          metavariable: $EXTERNAL_CALL
+          regex: '(transfer|send|call|delegatecall|balanceOf|allowance|approve|mint|burn)'
+    message: "External call inside unbounded loop — may hit gas limits"
+    severity: WARNING
+    languages: [solidity]
