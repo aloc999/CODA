@@ -86,13 +86,15 @@ Drop these into your project, customize the invariants, and run the audit.
 ## Typical Audit Flow
 
 ```
-Quick audit (Slither + Grep + Mythril)      ~3 min    →  First pass
-Symbolic (Mythril + Halmos)                  ~10 min   →  Prove critical paths
-Fuzzing (Echidna + Medusa + Foundry)         ~15 min   →  Break invariants
-Formal verification (Certora)                ~10 min   →  Cloud formal proof
-Mutation testing (Gambit)                    ~15 min   →  Test suite coverage
-────────────────────────────────────────────────────────
-FULL AUDIT                                   ~50 min   →  All 9 tools
+Quick audit (Slither + Grep + Mythril + Semgrep)  ~4 min    →  First pass
+All-static (Slither + Semgrep + Securify + Grep)   ~6 min    →  Static sweep
+Symbolic (Mythril + Manticore + Halmos)            ~15 min   →  Prove all paths
+Fuzzing (Echidna + Medusa + Foundry + Diff)        ~20 min   →  Break invariants
+Formal verification (Certora)                      ~10 min   →  Cloud formal proof
+Mutation testing (Gambit)                          ~15 min   →  Test suite coverage
+Secrets + Visualize                                ~3 min    →  Keys, graphs, deps
+─────────────────────────────────────────────────────────────
+FULL AUDIT (all 15 tools)                          ~70 min   →  Complete coverage
 ```
 
 ## Example Output
